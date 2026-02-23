@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQLMem v2 — MySQL Query Visualizer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap');
+
+:root {
+  --bg:#07090e; --bg2:#0c0f16; --bg3:#10141d; --panel:#121720; --panel2:#171e2c;
+  --border:#1e2738; --border2:#273145;
+  --text:#c4d4f0; --text2:#637899; --text3:#344260;
+  --accent:#00d4ff; --accent2:#0099bb;
+  --green:#00e676; --green2:#00a855;
+  --orange:#ff9500; --orange2:#cc7700;
+  --pink:#ff3d71; --purple:#a78bfa;
+  --yellow:#ffd166; --red:#ff4757; --teal:#06d6a0;
+  --col-a:#00d4ff; --col-b:#00e676; --col-c:#ff9500; --col-d:#a78bfa; --col-e:#ff3d71;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;display:flex;flex-direction:column;}
+
+/* ═══ HEADER ═══ */
+.hdr{display:flex;align-items:center;gap:14px;padding:8px 18px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;z-index:50;}
+.logo{display:flex;align-items:center;gap:9px;}
+.logo-box{width:30px;height:30px;background:linear-gradient(135deg,var(--accent),var(--purple));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.logo-txt{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.5px;}
+.logo-txt span{color:var(--accent);}
+.logo-sub{font-size:9px;color:var(--text3);margin-left:2px;}
+.hdr-tabs{display:flex;gap:2px;margin-left:20px;}
+.tab-btn{padding:5px 13px;border-radius:6px;border:1px solid transparent;background:transparent;color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;transition:.15s;letter-spacing:.5px;}
+.tab-btn:hover{color:var(--text);border-color:var(--border2);}
+.tab-btn.active{background:var(--accent)15;color:var(--accent);border-color:var(--accent)44;}
+.hdr-stats{margin-left:auto;display:flex;gap:18px;}
+.stat{text-align:center;}
+.stat-lbl{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;}
+.stat-val{font-size:16px;font-weight:700;color:var(--accent);font-family:'Syne',sans-serif;}
+.hdr-acts{display:flex;gap:6px;margin-left:16px;}
+.btn{padding:5px 13px;border-radius:5px;border:none;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;transition:.15s;letter-spacing:.3px;}
+.btn-p{background:var(--accent);color:#000;} .btn-p:hover{background:#fff;}
+.btn-d{background:transparent;color:var(--red);border:1px solid var(--red)33;} .btn-d:hover{background:var(--red)15;}
+.btn-s{background:var(--green);color:#000;} .btn-s:hover{opacity:.85;}
+.btn-o{background:transparent;color:var(--text2);border:1px solid var(--border2);} .btn-o:hover{border-color:var(--accent);color:var(--accent);}
+.btn-w{background:var(--panel2);color:var(--text);border:1px solid var(--border2);} .btn-w:hover{border-color:var(--purple);color:var(--purple);}
+
+/* ═══ LAYOUT ═══ */
+.main{display:flex;flex:1;overflow:hidden;}
+
+/* ═══ LEFT PANEL ═══ */
+.lpanel{width:290px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;}
+.sec{border-bottom:1px solid var(--border);flex-shrink:0;}
+.sec-hdr{display:flex;align-items:center;gap:7px;padding:8px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);cursor:pointer;user-select:none;transition:.15s;}
+.sec-hdr:hover{color:var(--text2);}
+.sec-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.sec-body{overflow:hidden;}
+
+/* SQL Editor */
+.sql-wrap{padding:8px;}
+.sql-ta{width:100%;height:160px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;padding:9px;resize:none;outline:none;line-height:1.65;caret-color:var(--accent);}
+.sql-ta:focus{border-color:var(--accent)55;}
+.sql-acts{display:flex;gap:5px;margin-top:6px;}
+.sql-acts .btn{flex:1;}
+
+/* Presets */
+.presets{padding:6px;}
+.preset-btn{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 9px;cursor:pointer;text-align:left;transition:.15s;margin-bottom:3px;display:block;}
+.preset-btn:hover{border-color:var(--accent)44;color:var(--accent);background:var(--accent)08;}
+
+/* Query mode tabs */
+.mode-tabs{display:flex;gap:3px;padding:6px 8px;}
+.mode-tab{flex:1;padding:4px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:9px;cursor:pointer;text-align:center;transition:.15s;}
+.mode-tab:hover{color:var(--text2);}
+.mode-tab.active{background:var(--accent)15;color:var(--accent);border-color:var(--accent)44;}
+
+/* JOIN controls */
+.jctrls{padding:8px;display:flex;flex-direction:column;gap:6px;}
+.jlbl{font-size:9px;color:var(--text3);margin-bottom:2px;}
+.jsel,.jinp{background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 7px;outline:none;width:100%;}
+.jsel:focus,.jinp:focus{border-color:var(--accent)55;}
+.jtype-btns{display:flex;gap:3px;}
+.jtype-btn{flex:1;padding:4px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text3);font-size:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:.15s;text-align:center;}
+.jtype-btn:hover{color:var(--text);}
+.jtype-btn.ji{border-color:var(--green);color:var(--green);background:var(--green)11;}
+.jtype-btn.jl{border-color:var(--orange);color:var(--orange);background:var(--orange)11;}
+.jtype-btn.jr{border-color:var(--purple);color:var(--purple);background:var(--purple)11;}
+.jtype-btn.jf{border-color:var(--pink);color:var(--pink);background:var(--pink)11;}
+
+/* DML Panel */
+.dml-wrap{padding:8px;display:flex;flex-direction:column;gap:5px;}
+.dml-row{display:flex;gap:4px;}
+.dml-sel,.dml-inp{background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 7px;outline:none;}
+.dml-sel:focus,.dml-inp:focus{border-color:var(--accent)55;}
+.dml-ta{width:100%;height:70px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:10px;padding:7px;outline:none;resize:none;line-height:1.6;}
+.dml-ta:focus{border-color:var(--accent)55;}
+.dml-type-btns{display:flex;gap:3px;}
+.dml-type-btn{flex:1;padding:4px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text3);font-size:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:.15s;text-align:center;}
+.dml-type-btn:hover{color:var(--text);}
+.dml-type-btn.di{border-color:var(--green);color:var(--green);background:var(--green)11;}
+.dml-type-btn.du{border-color:var(--orange);color:var(--orange);background:var(--orange)11;}
+.dml-type-btn.dd{border-color:var(--red);color:var(--red);background:var(--red)11;}
+.dml-type-btn.dt{border-color:var(--pink);color:var(--pink);background:var(--pink)11;}
+
+/* AGG Panel */
+.agg-wrap{padding:8px;display:flex;flex-direction:column;gap:5px;}
+.agg-fn-btns{display:flex;gap:3px;flex-wrap:wrap;}
+.agg-fn-btn{padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text3);font-size:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:.15s;}
+.agg-fn-btn:hover,.agg-fn-btn.active{border-color:var(--yellow);color:var(--yellow);background:var(--yellow)11;}
+
+/* Query Log */
+.qlog{flex:1;overflow-y:auto;padding:6px 8px;font-size:10px;line-height:1.7;}
+.qlog::-webkit-scrollbar{width:3px;} .qlog::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.log-ok{color:var(--green);} .log-err{color:var(--red);} .log-info{color:var(--accent);} .log-warn{color:var(--yellow);}
+
+/* ═══ CANVAS ═══ */
+.canvas-wrap{flex:1;position:relative;overflow:hidden;background:var(--bg);
+  background-image:radial-gradient(ellipse at 15% 15%,rgba(0,212,255,.04) 0%,transparent 55%),
+                   radial-gradient(ellipse at 85% 85%,rgba(167,139,250,.04) 0%,transparent 55%),
+                   linear-gradient(var(--border)1px 1px,transparent 1px 1px),
+                   linear-gradient(90deg,var(--border)1px 1px,transparent 1px 1px);
+  background-size:100% 100%,100% 100%,40px 40px,40px 40px;}
+#svg-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;}
+.canvas-lbl{position:absolute;top:12px;left:14px;font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;pointer-events:none;z-index:2;}
+.canvas-lbl span{color:var(--accent);margin-left:8px;}
+
+/* ═══ TABLE CARDS ═══ */
+.db-tbl{position:absolute;background:var(--panel2);border-radius:9px;border:1px solid var(--border2);min-width:195px;cursor:grab;user-select:none;z-index:10;transition:border-color .2s,box-shadow .2s;}
+.db-tbl:active{cursor:grabbing;}
+.db-tbl.hi-src{box-shadow:0 0 0 2px var(--orange),0 0 25px var(--orange)22;border-color:var(--orange);}
+.db-tbl.hi-tgt{box-shadow:0 0 0 2px var(--green),0 0 25px var(--green)22;border-color:var(--green);}
+.db-tbl.hi-dml{box-shadow:0 0 0 2px var(--yellow),0 0 25px var(--yellow)22;border-color:var(--yellow);}
+.tbl-hdr{padding:9px 11px 7px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;border-radius:9px 9px 0 0;}
+.tbl-name{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;color:#fff;flex:1;}
+.tbl-badge{font-size:8px;padding:2px 5px;border-radius:3px;}
+.tbl-cols{padding:3px 0;}
+.tbl-col{display:flex;align-items:center;gap:5px;padding:3px 11px;font-size:10px;transition:background .12s;position:relative;}
+.tbl-col:hover{background:rgba(255,255,255,.03);}
+.col-ico{font-size:9px;width:12px;text-align:center;flex-shrink:0;}
+.col-nm{flex:1;font-size:10px;}
+.col-ty{font-size:8px;color:var(--text3);}
+.col-badge{font-size:8px;padding:1px 4px;border-radius:2px;}
+.pk-col{color:var(--yellow);} .fk-col{color:var(--orange);} .norm-col{color:var(--text2);}
+.pk-b{background:var(--yellow)20;color:var(--yellow);} .fk-b{background:var(--orange)20;color:var(--orange);}
+.tbl-foot{padding:5px 11px;border-top:1px solid var(--border);font-size:8px;color:var(--text3);display:flex;justify-content:space-between;}
+
+/* Data Preview inside card */
+.tbl-data-preview{max-height:0;overflow:hidden;transition:max-height .4s ease;}
+.tbl-data-preview.open{max-height:280px;overflow-y:auto;}
+.preview-table{width:100%;border-collapse:collapse;font-size:9px;}
+.preview-table th{background:var(--bg);padding:3px 7px;color:var(--text3);border-bottom:1px solid var(--border);font-weight:500;}
+.preview-table td{padding:2px 7px;color:var(--text2);border-bottom:1px solid var(--border)55;}
+.preview-table tr.row-hi td{background:var(--accent)12;}
+.preview-table tr.row-match td{background:var(--green)12;color:var(--green);}
+.preview-table tr.row-filtered td{opacity:.3;text-decoration:line-through;}
+.preview-table tr.row-deleted td{background:var(--red)12;color:var(--red);text-decoration:line-through;}
+.preview-table tr.row-updated td{background:var(--yellow)12;color:var(--yellow);}
+.preview-table tr.row-inserted td{background:var(--green)12;color:var(--green);}
+.preview-null{color:var(--text3);font-style:italic;}
+
+/* ═══ RIGHT PANEL ═══ */
+.rpanel{width:310px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
+.rpanel-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.rpanel-tab{flex:1;padding:7px 4px;font-size:9px;text-align:center;cursor:pointer;color:var(--text3);border:none;background:transparent;font-family:'JetBrains Mono',monospace;transition:.15s;letter-spacing:.5px;}
+.rpanel-tab:hover{color:var(--text2);}
+.rpanel-tab.active{color:var(--accent);border-bottom:2px solid var(--accent);}
+.rpanel-body{flex:1;overflow-y:auto;padding:8px;}
+.rpanel-body::-webkit-scrollbar{width:3px;} .rpanel-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* Result table */
+.res-tbl{width:100%;border-collapse:collapse;font-size:9px;margin-top:6px;}
+.res-tbl th{background:var(--bg3);padding:4px 7px;color:var(--text3);text-align:left;border:1px solid var(--border);font-weight:500;}
+.res-tbl td{padding:3px 7px;border:1px solid var(--border);color:var(--text2);}
+.res-tbl tr:hover td{background:rgba(255,255,255,.02);}
+.res-entering{animation:rowIn .35s ease-out forwards;}
+@keyframes rowIn{from{opacity:0;transform:translateX(-8px);background:var(--accent)18;}to{opacity:1;transform:none;}}
+.null-c{color:var(--text3);font-style:italic;} .match-c{color:var(--green);} .null-row td{background:var(--orange)08;}
+
+/* Venn */
+.venn-wrap{display:flex;justify-content:center;align-items:center;padding:10px 0;position:relative;height:90px;}
+.vc{width:78px;height:78px;border-radius:50%;border:2px solid;position:absolute;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;transition:.4s;}
+.vc-l{left:25px;} .vc-r{left:85px;}
+.vc-overlap{position:absolute;left:55px;width:55px;height:78px;z-index:5;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;pointer-events:none;border:none !important;background:transparent !important;}
+
+/* Execution order */
+.exec-order{display:flex;flex-direction:column;gap:4px;padding:4px 0;}
+.exec-step{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);transition:.3s;position:relative;overflow:hidden;}
+.exec-step.active{border-color:var(--accent);background:var(--accent)12;box-shadow:0 0 15px var(--accent)15;}
+.exec-step.done{border-color:var(--green)55;background:var(--green)08;}
+.exec-step.pending{opacity:.4;}
+.exec-num{font-size:11px;font-weight:700;font-family:'Syne',sans-serif;color:var(--text3);width:18px;flex-shrink:0;}
+.exec-step.active .exec-num{color:var(--accent);}
+.exec-step.done .exec-num{color:var(--green);}
+.exec-kw{font-size:11px;font-weight:600;color:var(--text2);flex:1;}
+.exec-step.active .exec-kw{color:var(--accent);}
+.exec-step.done .exec-kw{color:var(--green);}
+.exec-desc{font-size:9px;color:var(--text3);}
+.exec-step.active .exec-desc{color:var(--accent)88;}
+.exec-shine{position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);transform:translateX(-100%);transition:none;}
+.exec-step.active .exec-shine{animation:shine .8s ease-in-out;}
+@keyframes shine{from{transform:translateX(-100%);}to{transform:translateX(200%);}}
+.exec-arrow{font-size:16px;color:var(--border2);text-align:center;margin:0 auto;}
+
+/* AGG result */
+.agg-card{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:10px;margin-bottom:8px;}
+.agg-card-title{font-size:10px;color:var(--accent);margin-bottom:8px;font-weight:600;}
+.agg-groups{display:flex;flex-direction:column;gap:4px;}
+.agg-group-item{display:flex;align-items:center;gap:8px;padding:4px 8px;background:var(--bg);border-radius:4px;border:1px solid var(--border);}
+.agg-group-key{font-size:10px;color:var(--text);flex:1;}
+.agg-group-val{font-size:11px;font-weight:700;color:var(--yellow);}
+.agg-group-bar{height:4px;border-radius:2px;background:var(--yellow);transition:width .6s ease-out;margin-top:3px;}
+
+/* WHERE filter result */
+.filter-info{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:8px;margin-bottom:8px;font-size:10px;}
+.filter-clause{color:var(--purple);font-weight:600;margin-bottom:5px;}
+.filter-stats{display:flex;gap:10px;margin-top:5px;}
+.filter-stat{background:var(--bg);border-radius:4px;padding:4px 8px;text-align:center;}
+.filter-stat-val{font-size:14px;font-weight:700;font-family:'Syne',sans-serif;}
+.filter-stat-lbl{font-size:8px;color:var(--text3);}
+
+/* DML result */
+.dml-result-card{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:10px;margin-bottom:8px;}
+.dml-result-title{font-size:10px;font-weight:600;margin-bottom:7px;}
+
+/* ORDER card */
+.order-card{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:10px;margin-bottom:8px;}
+
+/* ═══ STATUS ═══ */
+.statusbar{padding:4px 14px;border-top:1px solid var(--border);display:flex;gap:14px;font-size:9px;color:var(--text3);flex-shrink:0;background:var(--bg2);}
+.s-ok{color:var(--green);} .s-err{color:var(--red);} .s-run{color:var(--orange);}
+
+/* ═══ SVG ANIMATIONS ═══ */
+.fk-path{stroke-dasharray:6 4;fill:none;animation:dashFlow 1.8s linear infinite;}
+@keyframes dashFlow{from{stroke-dashoffset:0;}to{stroke-dashoffset:-20;}}
+.join-beam{fill:none;stroke-dasharray:8 4;animation:dashFlow .9s linear infinite;}
+
+/* Tooltip */
+.tooltip{position:absolute;background:var(--panel2);border:1px solid var(--border2);border-radius:5px;padding:5px 9px;font-size:9px;color:var(--text);pointer-events:none;z-index:300;white-space:nowrap;opacity:0;transition:opacity .15s;}
+
+/* ENTER animation */
+@keyframes tblIn{from{opacity:0;transform:scale(.92) translateY(8px);}to{opacity:1;transform:none;}}
+.tbl-enter{animation:tblIn .3s ease-out forwards;}
+
+/* Scanning row animation */
+@keyframes scanRow{0%{background-position:-100% 0;}100%{background-position:200% 0;}}
+.scan-anim{background:linear-gradient(90deg,transparent,var(--accent)18,transparent);background-size:200% 100%;animation:scanRow .7s ease-in-out forwards;}
+
+/* Row counter badge */
+.rows-badge{font-size:8px;padding:1px 5px;border-radius:10px;}
+
+/* EXEC ORDER MODAL OVERLAY */
+.exec-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
+.exec-overlay.open{opacity:1;pointer-events:all;}
+.exec-modal{background:var(--panel);border:1px solid var(--border2);border-radius:12px;padding:20px;width:440px;max-height:80vh;overflow-y:auto;}
+.exec-modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#fff;margin-bottom:4px;}
+.exec-modal-sub{font-size:10px;color:var(--text3);margin-bottom:14px;}
+</style>
+</head>
+<body>
+<!-- HEADER -->
+<div class="hdr">
+  <div class="logo">
+    <div class="logo-box">🗄</div>
+    <div class="logo-txt">SQL<span>Mem</span></div>
+  </div>
+  <span class="logo-sub">v2 — MySQL Visualizer</span>
+  <div class="hdr-tabs">
+    <button class="tab-btn active" onclick="switchTab('schema',this)">SCHEMA</button>
+    <button class="tab-btn" onclick="switchTab('dml',this)">DML</button>
+    <button class="tab-btn" onclick="switchTab('select',this)">SELECT/WHERE</button>
+    <button class="tab-btn" onclick="switchTab('join',this)">JOIN</button>
+    <button class="tab-btn" onclick="switchTab('agg',this)">GROUP BY</button>
+    <button class="tab-btn" onclick="openExecOrder()">⚙ EXEC ORDER</button>
+  </div>
+  <div class="hdr-stats">
+    <div class="stat"><div class="stat-lbl">Tables</div><div class="stat-val" id="st-tables">0</div></div>
+    <div class="stat"><div class="stat-lbl">Rows</div><div class="stat-val" id="st-rows">0</div></div>
+    <div class="stat"><div class="stat-lbl">Relations</div><div class="stat-val" id="st-rels">0</div></div>
+  </div>
+  <div class="hdr-acts">
+    <button class="btn btn-o" onclick="clearAll()">✕ CLEAR</button>
+    <button class="btn btn-p" onclick="runCurrentTab()">▶ RUN</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+<!-- LEFT PANEL -->
+<div class="lpanel">
+
+  <!-- ── SCHEMA TAB ── -->
+  <div id="tab-schema" class="tab-content">
+    <div class="sec">
+      <div class="sec-hdr"><div class="sec-dot" style="background:var(--accent)"></div>SQL EDITOR</div>
+      <div class="sec-body">
+        <div class="sql-wrap">
+          <textarea class="sql-ta" id="sql-input" placeholder="-- CREATE TABLE + INSERT statements..."></textarea>
+          <div class="sql-acts">
+            <button class="btn btn-s" onclick="executeSchema()" style="flex:2">▶ EXECUTE</button>
+            <button class="btn btn-d" onclick="document.getElementById('sql-input').value=''">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-hdr"><div class="sec-dot" style="background:var(--purple)"></div>PRESETS</div>
+      <div class="sec-body">
+        <div class="presets">
+          <button class="preset-btn" onclick="loadPreset('company')">🏢 Company — employees, departments</button>
+          <button class="preset-btn" onclick="loadPreset('ecommerce')">🛒 E-Commerce — users, orders, products</button>
+          <button class="preset-btn" onclick="loadPreset('school')">🎓 School — students, courses, enrollments</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DML TAB ── -->
+  <div id="tab-dml" class="tab-content" style="display:none">
+    <div class="sec">
+      <div class="sec-hdr"><div class="sec-dot" style="background:var(--green)"></div>DML OPERATION</div>
+      <div class="sec-body">
+        <div class="dml-wrap">
+          <div class="jlbl">OPERATION TYPE</div>
+          <div class="dml-type-btns">
+            <button class="dml-type-btn di" onclick="selDML('INSERT',this)">INSERT</button>
+            <button class="dml-type-btn" onclick="selDML('UPDATE',this)">UPDATE</button>
+            <button class="dml-type-btn" onclick="selDML('DELETE',this)">DELETE</button>
+            <button class="dml-type-btn" onclick="selDML('TRUNCATE',this)">TRUNCATE</button>
+          </div>
+          <div class="jlbl" style="margin-top:6px">TARGET TABLE</div>
+          <select class="dml-sel" id="dml-table" style="width:100%"><option value="">— select —</option></select>
+          <div id="dml-insert-fields" style="display:none">
+            <div class="jlbl" style="margin-top:6px">VALUES (comma-separated per row)</div>
+            <textarea class="dml-ta" id="dml-insert-vals" placeholder="e.g. 10,'Frank',2,95000&#10;11,'Grace',3,88000"></textarea>
+          </div>
+          <div id="dml-update-fields" style="display:none">
+            <div class="jlbl" style="margin-top:6px">SET CLAUSE</div>
+            <input class="jinp" id="dml-set" placeholder="e.g. salary=99000" style="width:100%;margin-bottom:4px">
+            <div class="jlbl">WHERE CONDITION</div>
+            <input class="jinp" id="dml-where-upd" placeholder="e.g. id=1" style="width:100%">
+          </div>
+          <div id="dml-delete-fields" style="display:none">
+            <div class="jlbl" style="margin-top:6px">WHERE CONDITION</div>
+            <input class="jinp" id="dml-where-del" placeholder="e.g. id=5 (empty = all rows)" style="width:100%">
+            <div id="dml-truncate-note" style="display:none;margin-top:6px;font-size:9px;color:var(--red);line-height:1.5;">
+              ⚠ TRUNCATE removes ALL rows instantly.<br>No WHERE clause. Cannot rollback easily.<br>Faster than DELETE for full wipe.
+            </div>
+          </div>
+          <button class="btn btn-p" style="width:100%;margin-top:8px" onclick="animateDML()">⚡ ANIMATE DML</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SELECT/WHERE TAB ── -->
+  <div id="tab-select" class="tab-content" style="display:none">
+    <div class="sec">
+      <div class="sec-hdr"><div class="sec-dot" style="background:var(--teal)"></div>SELECT / WHERE / ORDER</div>
+      <div class="sec-body">
+        <div class="dml-wrap">
+          <div class="jlbl">TABLE</div>
+          <select class="jsel" id="sw-table" style="width:100%" onchange="populateSWCols()"><option value="">— select —</option></select>
+          <div class="jlbl" style="margin-top:5px">SELECT COLUMNS</div>
+          <input class="jinp" id="sw-cols" placeholder="* or col1, col2, ..." style="width:100%">
+          <div class="jlbl" style="margin-top:5px">WHERE CLAUSE</div>
+          <input class="jinp" id="sw-where" placeholder="e.g. salary > 70000 AND dept_id = 1" style="width:100%">
+          <div class="jlbl" style="margin-top:5px">FILTER TYPE</div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap;">
+            <button class="agg-fn-btn" onclick="injectFilter('LIKE')">LIKE</button>
+            <button class="agg-fn-btn" onclick="injectFilter('IN')">IN</button>
+            <button class="agg-fn-btn" onclick="injectFilter('BETWEEN')">BETWEEN</button>
+            <button class="agg-fn-btn" onclick="injectFilter('IS NULL')">IS NULL</button>
+            <button class="agg-fn-btn" onclick="injectFilter('IS NOT NULL')">IS NOT NULL</button>
+          </div>
+          <div class="jlbl" style="margin-top:5px">ORDER BY</div>
+          <div style="display:flex;gap:4px">
+            <input class="jinp" id="sw-orderby" placeholder="column" style="flex:2">
+            <select class="jsel" id="sw-order-dir" style="flex:1"><option>ASC</option><option>DESC</option></select>
+          </div>
+          <div class="jlbl" style="margin-top:5px">LIMIT / OFFSET</div>
+          <div style="display:flex;gap:4px">
+            <input class="jinp" id="sw-limit" placeholder="LIMIT" style="flex:1">
+            <input class="jinp" id="sw-offset" placeholder="OFFSET" style="flex:1">
+          </div>
+          <button class="btn btn-p" style="width:100%;margin-top:8px" onclick="animateSelect()">⚡ ANIMATE QUERY</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── JOIN TAB ── -->
+  <div id="tab-join" class="tab-content" style="display:none">
+    <div class="sec">
+      <div class="sec-hdr"><div class="sec-dot" style="background:var(--orange)"></div>JOIN ANIMATOR</div>
+      <div class="sec-body">
+        <div class="jctrls">
+          <div class="jlbl">JOIN TYPE</div>
+          <div class="jtype-btns" id="jtype-btns">
+            <button class="jtype-btn ji" onclick="selJoin('INNER',this)">INNER</button>
+            <button class="jtype-btn" onclick="selJoin('LEFT',this)">LEFT</button>
+            <button class="jtype-btn" onclick="selJoin('RIGHT',this)">RIGHT</button>
+            <button class="jtype-btn" onclick="selJoin('FULL',this)">FULL</button>
+          </div>
+          <div class="jlbl" style="margin-top:4px">FROM TABLE</div>
+          <select class="jsel" id="j-left"><option value="">— select —</option></select>
+          <div class="jlbl" style="margin-top:4px">JOIN TABLE</div>
+          <select class="jsel" id="j-right"><option value="">— select —</option></select>
+          <div class="jlbl" style="margin-top:4px">ON CONDITION</div>
+          <input class="jinp" id="j-cond" placeholder="table1.col = table2.col">
+          <button class="btn btn-p" style="width:100%;margin-top:8px" onclick="animateJoin()">⚡ ANIMATE JOIN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── AGG TAB ── -->
+  <div id="tab-agg" class="tab-content" style="display:none">
+    <div class="sec">
+      <div class="sec-hdr"><div class="sec-dot" style="background:var(--yellow)"></div>GROUP BY + AGGREGATES</div>
+      <div class="sec-body">
+        <div class="agg-wrap">
+          <div class="jlbl">TABLE</div>
+          <select class="jsel" id="agg-table" style="width:100%" onchange="populateAggCols()"><option value="">— select —</option></select>
+          <div class="jlbl" style="margin-top:5px">GROUP BY COLUMN</div>
+          <select class="jsel" id="agg-groupby" style="width:100%"><option value="">— none —</option></select>
+          <div class="jlbl" style="margin-top:5px">AGGREGATE FUNCTION</div>
+          <div class="agg-fn-btns" id="agg-fn-btns">
+            <button class="agg-fn-btn active" onclick="selAggFn('COUNT',this)">COUNT</button>
+            <button class="agg-fn-btn" onclick="selAggFn('SUM',this)">SUM</button>
+            <button class="agg-fn-btn" onclick="selAggFn('AVG',this)">AVG</button>
+            <button class="agg-fn-btn" onclick="selAggFn('MIN',this)">MIN</button>
+            <button class="agg-fn-btn" onclick="selAggFn('MAX',this)">MAX</button>
+          </div>
+          <div class="jlbl" style="margin-top:5px">ON COLUMN (for SUM/AVG/MIN/MAX)</div>
+          <select class="jsel" id="agg-col" style="width:100%"><option value="">— select col —</option></select>
+          <div class="jlbl" style="margin-top:5px">HAVING (optional)</div>
+          <input class="jinp" id="agg-having" placeholder="e.g. COUNT(*) > 1" style="width:100%">
+          <div style="display:flex;gap:4px;align-items:center;margin-top:5px">
+            <input type="checkbox" id="agg-null-check" style="accent-color:var(--accent)">
+            <label for="agg-null-check" style="font-size:9px;color:var(--text2);cursor:pointer">Show NULL handling</label>
+          </div>
+          <button class="btn btn-p" style="width:100%;margin-top:8px" onclick="animateAgg()">⚡ ANIMATE AGGREGATION</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUERY LOG always visible at bottom -->
+  <div class="qlog" id="qlog">
+    <div style="color:var(--text3)">// SQLMem v2 ready. Load a preset to begin.</div>
+  </div>
+</div>
+
+<!-- CANVAS -->
+<div class="canvas-wrap" id="canvas-wrap">
+  <div class="canvas-lbl">SCHEMA<span id="canvas-lbl-cnt">— no tables</span></div>
+  <svg id="svg-canvas"></svg>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="rpanel">
+  <div class="rpanel-tabs">
+    <button class="rpanel-tab active" onclick="switchRTab('result',this)">RESULT</button>
+    <button class="rpanel-tab" onclick="switchRTab('execorder',this)">EXEC ORDER</button>
+    <button class="rpanel-tab" onclick="switchRTab('explain',this)">EXPLAIN</button>
+  </div>
+  <div class="rpanel-body" id="rpanel-result">
+    <div style="color:var(--text3);font-size:10px;text-align:center;margin-top:30px;line-height:2">Run any operation<br>to see results here.</div>
+  </div>
+  <div class="rpanel-body" id="rpanel-execorder" style="display:none">
+    <div style="font-size:10px;color:var(--text3);margin-bottom:10px">SQL Execution Order — how MySQL actually processes your query:</div>
+    <div class="exec-order" id="exec-order-steps"></div>
+  </div>
+  <div class="rpanel-body" id="rpanel-explain" style="display:none">
+    <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Query Explanation:</div>
+    <div id="explain-body" style="font-size:10px;color:var(--text2);line-height:1.8"></div>
+  </div>
+</div>
+</div>
+
+<!-- EXEC ORDER OVERLAY -->
+<div class="exec-overlay" id="exec-overlay" onclick="closeExecOrder()">
+  <div class="exec-modal" onclick="event.stopPropagation()">
+    <div class="exec-modal-title">⚙ SQL Execution Order</div>
+    <div class="exec-modal-sub">MySQL does NOT execute SQL in the order you write it. Here's the real order:</div>
+    <div id="exec-order-full"></div>
+    <button class="btn btn-o" style="width:100%;margin-top:14px" onclick="closeExecOrder()">CLOSE</button>
+  </div>
+</div>
+
+<div class="statusbar">
+  <span id="s-main" class="s-ok">● READY</span>
+  <span id="s-msg">No query executed</span>
+  <span style="margin-left:auto" id="s-time"></span>
+</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let tables = {}, relations = [], animating = false;
+let activeTab = 'schema', activeRTab = 'result';
+let selectedJoin = 'INNER', selectedDML = 'INSERT', selectedAggFn = 'COUNT';
+const COLORS = ['#00d4ff','#00e676','#ff9500','#a78bfa','#ff3d71','#06d6a0','#ffd166'];
+let colorIdx = 0;
+
+// ══════════════════════════════════════════════════════
+//  PRESETS
+// ══════════════════════════════════════════════════════
+const PRESETS = {
+company:`CREATE TABLE departments (
+  id INT PRIMARY KEY,
+  name VARCHAR(50),
+  budget DECIMAL
+);
+CREATE TABLE employees (
+  id INT PRIMARY KEY,
+  name VARCHAR(50),
+  dept_id INT,
+  manager_id INT,
+  salary DECIMAL,
+  FOREIGN KEY (dept_id) REFERENCES departments(id)
+);
+CREATE TABLE managers (
+  id INT PRIMARY KEY,
+  employee_id INT,
+  level INT,
+  FOREIGN KEY (employee_id) REFERENCES employees(id)
+);
+INSERT INTO departments VALUES (1,'Engineering',500000),(2,'Marketing',200000),(3,'Sales',300000),(4,'Legal',150000);
+INSERT INTO employees VALUES (1,'Alice',1,NULL,90000),(2,'Bob',1,1,75000),(3,'Carol',2,NULL,70000),(4,'Dave',2,3,65000),(5,'Eve',3,NULL,80000),(6,'Frank',NULL,NULL,60000);
+INSERT INTO managers VALUES (1,1,2),(2,3,1),(3,5,1);`,
+
+ecommerce:`CREATE TABLE users (
+  id INT PRIMARY KEY,
+  email VARCHAR(100),
+  country VARCHAR(30)
+);
+CREATE TABLE orders (
+  id INT PRIMARY KEY,
+  user_id INT,
+  total DECIMAL,
+  status VARCHAR(20),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE TABLE products (
+  id INT PRIMARY KEY,
+  name VARCHAR(100),
+  price DECIMAL,
+  category VARCHAR(50)
+);
+CREATE TABLE order_items (
+  id INT PRIMARY KEY,
+  order_id INT,
+  product_id INT,
+  qty INT,
+  FOREIGN KEY (order_id) REFERENCES orders(id),
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+INSERT INTO users VALUES (1,'alice@ex.com','US'),(2,'bob@ex.com','UK'),(3,'carol@ex.com','DE'),(4,'dave@ex.com','US');
+INSERT INTO orders VALUES (1,1,149.99,'shipped'),(2,2,89.50,'pending'),(3,1,210.00,'delivered'),(4,3,55.00,'shipped'),(5,4,310.00,'pending');
+INSERT INTO products VALUES (1,'Laptop',999,'Electronics'),(2,'Mouse',29,'Electronics'),(3,'Keyboard',79,'Electronics'),(4,'Desk',299,'Furniture'),(5,'Chair',399,'Furniture');
+INSERT INTO order_items VALUES (1,1,2,1),(2,1,3,2),(3,2,1,1),(4,3,4,1),(5,4,2,2),(6,5,5,1);`,
+
+school:`CREATE TABLE students (
+  id INT PRIMARY KEY,
+  name VARCHAR(50),
+  grade VARCHAR(5),
+  gpa DECIMAL
+);
+CREATE TABLE courses (
+  id INT PRIMARY KEY,
+  title VARCHAR(100),
+  credits INT,
+  dept VARCHAR(50)
+);
+CREATE TABLE enrollments (
+  id INT PRIMARY KEY,
+  student_id INT,
+  course_id INT,
+  score INT,
+  FOREIGN KEY (student_id) REFERENCES students(id),
+  FOREIGN KEY (course_id) REFERENCES courses(id)
+);
+INSERT INTO students VALUES (1,'Alice','A',3.9),(2,'Bob','B',3.2),(3,'Carol','A',3.8),(4,'Dave','C',2.7),(5,'Eve','B',3.5);
+INSERT INTO courses VALUES (1,'Mathematics',4,'Science'),(2,'Physics',3,'Science'),(3,'CS 101',3,'Computing'),(4,'History',2,'Arts');
+INSERT INTO enrollments VALUES (1,1,1,92),(2,1,2,88),(3,2,1,74),(4,3,3,95),(5,4,2,61),(6,5,1,84),(7,5,4,78),(8,1,3,97);`
+};
+
+// ══════════════════════════════════════════════════════
+//  SQL PARSER
+// ══════════════════════════════════════════════════════
+function parseSQL(sql) {
+  const text = sql.replace(/--[^\n]*/g,'').replace(/\r\n/g,'\n');
+  const createRx = /CREATE\s+TABLE\s+(\w+)\s*\(([\s\S]*?)\)\s*;/gi;
+  const insertRx = /INSERT\s+INTO\s+(\w+)\s+VALUES\s+([\s\S]*?);/gi;
+  const newTables = {}, newRels = [];
+  let m;
+
+  while ((m = createRx.exec(text)) !== null) {
+    const tName = m[1], body = m[2];
+    const cols = [], fks = [];
+    // Split body by comma but NOT inside parentheses
+    const parts = splitOutsideParens(body);
+    parts.forEach(part => {
+      part = part.trim(); if (!part) return;
+      const fkM = part.match(/FOREIGN\s+KEY\s*\((\w+)\)\s+REFERENCES\s+(\w+)\s*\((\w+)\)/i);
+      if (fkM) { fks.push({fromCol:fkM[1],toTable:fkM[2],toCol:fkM[3]}); return; }
+      const cM = part.match(/^(\w+)\s+(\w+(?:\s*\([^)]*\))?)(.*)?$/);
+      if (cM && !['PRIMARY','FOREIGN','UNIQUE','KEY','INDEX','CONSTRAINT','CHECK'].includes(cM[1].toUpperCase())) {
+        const rest = (cM[3]||'').toUpperCase();
+        cols.push({name:cM[1], type:cM[2].toUpperCase(), isPK:rest.includes('PRIMARY KEY'), isFK:false});
+      }
+    });
+    fks.forEach(fk => {
+      const c = cols.find(x=>x.name===fk.fromCol); if(c) c.isFK=true;
+      newRels.push({from:tName, fromCol:fk.fromCol, to:fk.toTable, toCol:fk.toCol});
+    });
+    newTables[tName] = {cols, data:[], pos:{x:60+Object.keys(newTables).length*240, y:80}, color:COLORS[colorIdx++%COLORS.length]};
+  }
+
+  while ((m = insertRx.exec(text)) !== null) {
+    const tName=m[1], t=newTables[tName]||tables[tName]; if(!t) continue;
+    extractRowStrings(m[2]).forEach(rowStr => {
+      const vals = parseValues(rowStr);
+      const row = {}; t.cols.forEach((c,i)=>{ row[c.name]=vals[i]!==undefined?vals[i]:null; });
+      t.data.push(row);
+    });
+  }
+  return {tables:newTables, relations:newRels};
+}
+
+// Split a string by commas that are NOT inside parentheses
+function splitOutsideParens(str) {
+  const parts=[]; let depth=0, cur='';
+  for(let i=0;i<str.length;i++){
+    const ch=str[i];
+    if(ch==='(') depth++;
+    else if(ch===')') depth--;
+    else if(ch===',' && depth===0){ parts.push(cur.trim()); cur=''; continue; }
+    cur+=ch;
+  }
+  if(cur.trim()) parts.push(cur.trim());
+  return parts;
+}
+
+// Extract the contents of each (...) row group from VALUES clause
+function extractRowStrings(valuesStr) {
+  const rows=[]; let depth=0, cur='', inRow=false;
+  for(let i=0;i<valuesStr.length;i++){
+    const ch=valuesStr[i];
+    if(ch==='(' && depth===0){ depth=1; inRow=true; cur=''; continue; }
+    if(ch===')' && depth===1){ depth=0; rows.push(cur); inRow=false; continue; }
+    if(inRow) cur+=ch;
+  }
+  return rows;
+}
+
+function parseValues(str) {
+  const vals=[]; let cur='', inQ=false, qCh='';
+  const pushVal = (s) => {
+    s = s.trim();
+    if(s === '' || s.toUpperCase() === 'NULL') { vals.push(null); return; }
+    if((s.startsWith("'") && s.endsWith("'")) || (s.startsWith('"') && s.endsWith('"'))) { vals.push(s.slice(1,-1)); return; }
+    const n = Number(s);
+    vals.push(isNaN(n) ? s : n);
+  };
+  for(let i=0;i<str.length;i++){
+    const ch=str[i];
+    if(!inQ && (ch==="'"||ch==='"')){ inQ=true; qCh=ch; cur+=ch; continue; }
+    if(inQ && ch===qCh){ inQ=false; cur+=ch; continue; }
+    if(!inQ && ch===','){ pushVal(cur); cur=''; continue; }
+    cur+=ch;
+  }
+  pushVal(cur);
+  return vals;
+}
+
+// ══════════════════════════════════════════════════════
+//  EXECUTE SCHEMA
+// ══════════════════════════════════════════════════════
+function executeSchema() {
+  const sql = document.getElementById('sql-input').value.trim();
+  if(!sql){ log('No SQL input','err'); return; }
+  try {
+    const t0 = performance.now();
+    const r = parseSQL(sql);
+    Object.entries(r.tables).forEach(([n,t])=>{ tables[n]=t; });
+    r.relations.forEach(rel=>{ if(!relations.find(x=>x.from===rel.from&&x.fromCol===rel.fromCol)) relations.push(rel); });
+    const dt = (performance.now()-t0).toFixed(1);
+    log(`Parsed ${Object.keys(r.tables).length} table(s), ${r.relations.length} FK(s) — ${dt}ms`,'ok');
+    arrangeLayout(); renderAll(); updateSelects(); updateStats();
+    setStatus('OK',`${Object.keys(r.tables).length} tables loaded`);
+    buildExecOrderUI('SELECT');
+  } catch(e){ log('Error: '+e.message,'err'); setStatus('ERR',e.message); }
+}
+
+function loadPreset(name) {
+  clearAll();
+  document.getElementById('sql-input').value = PRESETS[name]||'';
+  log(`Loaded preset: ${name}`,'info');
+  setTimeout(executeSchema,100);
+  const auto={company:{lt:'employees',rt:'departments',cond:'employees.dept_id = departments.id'},
+               ecommerce:{lt:'orders',rt:'users',cond:'orders.user_id = users.id'},
+               school:{lt:'enrollments',rt:'students',cond:'enrollments.student_id = students.id'}};
+  if(auto[name]) setTimeout(()=>{
+    document.getElementById('j-left').value=auto[name].lt;
+    document.getElementById('j-right').value=auto[name].rt;
+    document.getElementById('j-cond').value=auto[name].cond;
+  },400);
+}
+
+// ══════════════════════════════════════════════════════
+//  RENDER TABLES + SVG
+// ══════════════════════════════════════════════════════
+function renderAll() { renderTables(); renderConnections(); }
+
+function renderTables() {
+  document.querySelectorAll('.db-tbl').forEach(e=>e.remove());
+  Object.entries(tables).forEach(([n,t])=>{ const el=buildTableCard(n,t); document.getElementById('canvas-wrap').appendChild(el); makeDraggable(el,n); });
+  const cnt=Object.keys(tables).length;
+  document.getElementById('canvas-lbl-cnt').textContent = cnt ? `— ${cnt} table(s)` : '— no tables';
+}
+
+function buildTableCard(name, tbl) {
+  const div=document.createElement('div');
+  div.className='db-tbl tbl-enter'; div.id='tbl-'+name;
+  div.style.left=tbl.pos.x+'px'; div.style.top=tbl.pos.y+'px';
+  div.style.borderColor=tbl.color+'55'; div.style.boxShadow=`0 0 20px ${tbl.color}12`;
+
+  const colsHTML = tbl.cols.map(c=>`
+    <div class="tbl-col ${c.isPK?'pk-col':c.isFK?'fk-col':'norm-col'}" id="col-${name}-${c.name}">
+      <span class="col-ico">${c.isPK?'🔑':c.isFK?'🔗':'·'}</span>
+      <span class="col-nm">${c.name}</span>
+      <span class="col-ty">${c.type}</span>
+      ${c.isPK?`<span class="col-badge pk-b">PK</span>`:''}
+      ${c.isFK?`<span class="col-badge fk-b">FK</span>`:''}
+    </div>`).join('');
+
+  const previewHTML = tbl.data.length>0 ? `
+    <div class="tbl-data-preview open" id="preview-${name}">
+      <table class="preview-table" id="ptbl-${name}">
+        <thead><tr>${tbl.cols.map(c=>`<th>${c.name}</th>`).join('')}</tr></thead>
+        <tbody id="pbody-${name}">${tbl.data.slice(0,8).map((row,i)=>`
+          <tr id="prow-${name}-${i}">${tbl.cols.map(c=>`<td>${row[c.name]===null?'<span class="preview-null">NULL</span>':row[c.name]}</td>`).join('')}</tr>
+        `).join('')}</tbody>
+      </table>
+    </div>` : '';
+
+  div.innerHTML=`
+    <div class="tbl-hdr" style="background:${tbl.color}18">
+      <span style="font-size:14px">🗂</span>
+      <span class="tbl-name" style="color:${tbl.color}">${name}</span>
+      <span class="tbl-badge" style="background:${tbl.color}22;color:${tbl.color}" onclick="togglePreview('${name}',event)" title="Toggle data preview">${tbl.data.length} rows ▾</span>
+    </div>
+    <div class="tbl-cols">${colsHTML}</div>
+    ${previewHTML}
+    <div class="tbl-foot"><span>${tbl.cols.length} cols</span><span style="color:${tbl.color}88">MySQL</span></div>`;
+  return div;
+}
+
+function togglePreview(name, e) {
+  e.stopPropagation();
+  const p=document.getElementById('preview-'+name);
+  if(p) p.classList.toggle('open');
+}
+
+function refreshPreview(name) {
+  const tbody=document.getElementById('pbody-'+name);
+  const tbl=tables[name]; if(!tbody||!tbl) return;
+  tbody.innerHTML=tbl.data.slice(0,8).map((row,i)=>`
+    <tr id="prow-${name}-${i}">${tbl.cols.map(c=>`<td>${row[c.name]===null?'<span class="preview-null">NULL</span>':row[c.name]}</td>`).join('')}</tr>
+  `).join('');
+  // ensure preview is open
+  const p=document.getElementById('preview-'+name); if(p&&!p.classList.contains('open')) p.classList.add('open');
+  // update badge
+  const hdr=document.getElementById('tbl-'+name);
+  if(hdr){const b=hdr.querySelector('.tbl-badge');if(b)b.textContent=tbl.data.length+' rows ▾';}
+}
+
+function renderConnections() {
+  const svg=document.getElementById('svg-canvas'); svg.innerHTML='';
+  const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+  relations.forEach((rel,i)=>{
+    const mk=document.createElementNS('http://www.w3.org/2000/svg','marker');
+    mk.setAttribute('id','arr-'+i); mk.setAttribute('markerWidth','8'); mk.setAttribute('markerHeight','6');
+    mk.setAttribute('refX','7'); mk.setAttribute('refY','3'); mk.setAttribute('orient','auto');
+    const poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    poly.setAttribute('points','0 0, 8 3, 0 6');
+    const fromColor=(tables[rel.from]||{}).color||'#ff9500';
+    poly.setAttribute('fill',fromColor); mk.appendChild(poly); defs.appendChild(mk);
+  });
+  svg.appendChild(defs);
+  setTimeout(()=>{ relations.forEach((rel,i)=>drawFKLine(svg,rel,i)); },60);
+}
+
+function getColPos(tName, colName, side='right') {
+  const tEl=document.getElementById('tbl-'+tName), cEl=document.getElementById('col-'+tName+'-'+colName);
+  if(!tEl||!cEl) return null;
+  const tR=tEl.getBoundingClientRect(), cR=cEl.getBoundingClientRect();
+  const cW=document.getElementById('canvas-wrap').getBoundingClientRect();
+  return { x: side==='right'? tR.right-cW.left : tR.left-cW.left, y: cR.top-cW.top+cR.height/2 };
+}
+
+function drawFKLine(svg, rel, idx) {
+  const from=getColPos(rel.from,rel.fromCol,'right'), to=getColPos(rel.to,rel.toCol,'left');
+  if(!from||!to) return;
+  const fc=(tables[rel.from]||{}).color||'#ff9500';
+  const cx=(from.x+to.x)/2;
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d',`M ${from.x} ${from.y} C ${cx} ${from.y}, ${cx} ${to.y}, ${to.x} ${to.y}`);
+  path.setAttribute('class','fk-path'); path.setAttribute('stroke',fc);
+  path.setAttribute('stroke-width','1.5'); path.setAttribute('opacity','0.55');
+  path.setAttribute('marker-end',`url(#arr-${idx})`); svg.appendChild(path);
+  // label midpoint
+  const lbl=document.createElementNS('http://www.w3.org/2000/svg','text');
+  lbl.setAttribute('x',(from.x+to.x)/2); lbl.setAttribute('y',(from.y+to.y)/2-5);
+  lbl.setAttribute('fill',fc); lbl.setAttribute('font-size','8');
+  lbl.setAttribute('font-family','JetBrains Mono,monospace'); lbl.setAttribute('text-anchor','middle');
+  lbl.setAttribute('opacity','0.6');
+  lbl.textContent=`${rel.from}.${rel.fromCol}→${rel.to}.${rel.toCol}`; svg.appendChild(lbl);
+}
+
+// ══════════════════════════════════════════════════════
+//  DRAGGABLE
+// ══════════════════════════════════════════════════════
+function makeDraggable(el, name) {
+  let sx,sy,sl,st;
+  el.addEventListener('mousedown',e=>{
+    if(['BUTTON','SELECT','INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+    sx=e.clientX; sy=e.clientY; sl=tables[name].pos.x; st=tables[name].pos.y;
+    const mm=e2=>{ tables[name].pos.x=sl+e2.clientX-sx; tables[name].pos.y=st+e2.clientY-sy; el.style.left=tables[name].pos.x+'px'; el.style.top=tables[name].pos.y+'px'; renderConnections(); };
+    const mu=()=>{ document.removeEventListener('mousemove',mm); document.removeEventListener('mouseup',mu); };
+    document.addEventListener('mousemove',mm); document.addEventListener('mouseup',mu); e.preventDefault();
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  ARRANGE
+// ══════════════════════════════════════════════════════
+function arrangeLayout() {
+  const names = Object.keys(tables);
+  if (!names.length) return;
+  const canvas = document.getElementById('canvas-wrap');
+  const W = canvas.clientWidth || 800;
+  const cols = Math.min(names.length, Math.floor(W / 260)) || 1;
+  names.forEach((n, i) => {
+    tables[n].pos.x = 40 + (i % cols) * 260;
+    tables[n].pos.y = 50 + Math.floor(i / cols) * 290;
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  ANIMATE JOIN
+// ══════════════════════════════════════════════════════
+async function animateJoin() {
+  if(animating) return; animating=true;
+  const ln=document.getElementById('j-left').value, rn=document.getElementById('j-right').value;
+  let cond=document.getElementById('j-cond').value.trim();
+  if(!ln||!rn){ log('Select both tables','err'); animating=false; return; }
+  if(!cond){ const rel=relations.find(r=>(r.from===ln&&r.to===rn)||(r.from===rn&&r.to===ln)); if(rel){ cond=`${rel.from}.${rel.fromCol} = ${rel.to}.${rel.toCol}`; document.getElementById('j-cond').value=cond; } else{ log('No condition or FK found','err'); animating=false; return; } }
+  const cm=cond.match(/(\w+)\.(\w+)\s*=\s*(\w+)\.(\w+)/); if(!cm){ log('Bad condition format','err'); animating=false; return; }
+  let [,t1,c1,t2,c2]=cm; if(t1!==ln&&t2===ln){[t1,c1,t2,c2]=[t2,c2,t1,c1];}
+  const lData=tables[ln].data, rData=tables[rn].data, jt=selectedJoin;
+  log(`${jt} JOIN: ${ln}.${c1} = ${rn}.${c2}`,'info');
+  setStatus('RUNNING',`${jt} JOIN animation`);
+  switchRTab('result',null);
+  showJoinSetup(jt,ln,rn);
+  buildExecOrderUI('JOIN');
+  highlightExecStep(0);
+  const lEl=document.getElementById('tbl-'+ln), rEl=document.getElementById('tbl-'+rn);
+  if(lEl) lEl.classList.add('hi-src'); if(rEl) rEl.classList.add('hi-tgt');
+  drawBeam(ln,c1,rn,c2,jt);
+  await sleep(300); highlightExecStep(1);
+  const results=[];
+  for(let li=0;li<lData.length;li++){
+    const lr=lData[li]; setRowClass('tbl-'+ln,li,'scan-anim'); await sleep(160);
+    for(let ri=0;ri<rData.length;ri++){
+      const rr=rData[ri]; setRowClass('tbl-'+rn,ri,'scan-anim'); await sleep(70);
+      const match=lr[c1]!=null&&rr[c2]!=null&&String(lr[c1])===String(rr[c2]);
+      if(match){ setRowClass('tbl-'+ln,li,'row-match'); setRowClass('tbl-'+rn,ri,'row-match'); await sleep(80);
+        const combined={}; tables[ln].cols.forEach(col=>combined[`${ln}.${col.name}`]=lr[col.name]); tables[rn].cols.forEach(col=>combined[`${rn}.${col.name}`]=rr[col.name]);
+        results.push({type:'match',data:combined}); }
+      clearRowClass('tbl-'+rn,ri);
+    }
+    if((jt==='LEFT'||jt==='FULL')&&!rData.some(rr=>String(lr[c1])===String(rr[c2]))){
+      const combined={}; tables[ln].cols.forEach(col=>combined[`${ln}.${col.name}`]=lr[col.name]); tables[rn].cols.forEach(col=>combined[`${rn}.${col.name}`]=null);
+      results.push({type:'left-only',data:combined});
+    }
+    clearRowClass('tbl-'+ln,li);
+  }
+  if(jt==='RIGHT'||jt==='FULL') rData.forEach(rr=>{ if(!lData.some(lr=>String(lr[c1])===String(rr[c2]))){const combined={}; tables[ln].cols.forEach(col=>combined[`${ln}.${col.name}`]=null); tables[rn].cols.forEach(col=>combined[`${rn}.${col.name}`]=rr[col.name]); results.push({type:'right-only',data:combined}); }});
+  highlightExecStep(2);
+  await showJoinResults(results,jt,ln,rn);
+  await sleep(400);
+  if(lEl) lEl.classList.remove('hi-src'); if(rEl) rEl.classList.remove('hi-tgt');
+  document.querySelectorAll('.join-beam,.scan-dot-svg').forEach(e=>e.remove());
+  log(`JOIN complete — ${results.length} rows`,'ok'); setStatus('OK',`${jt} JOIN → ${results.length} rows`);
+  animating=false;
+}
+
+function showJoinSetup(jt,ln,rn) {
+  const jColors={INNER:'var(--green)',LEFT:'var(--orange)',RIGHT:'var(--purple)',FULL:'var(--pink)'};
+  const color=jColors[jt]||'var(--accent)';
+  const vennHTML=buildVenn(jt,ln,rn);
+  document.getElementById('rpanel-result').innerHTML=`
+    <div class="agg-card" style="border-color:${color}33">
+      <div class="agg-card-title" style="color:${color}">⚡ ${jt} JOIN — ${ln} ⟷ ${rn}</div>
+      ${vennHTML}
+      <div id="join-scan-info" style="font-size:9px;color:var(--text3);text-align:center;margin-top:6px">Scanning rows...</div>
+    </div>
+    <div id="join-result-body"></div>`;
+}
+
+function buildVenn(jt,ln,rn) {
+  const shades={INNER:{l:'',r:'',c:'rgba(0,230,118,0.3)'},LEFT:{l:'rgba(255,149,0,0.2)',r:'',c:'rgba(255,149,0,0.25)'},RIGHT:{l:'',r:'rgba(167,139,250,0.2)',c:'rgba(167,139,250,0.25)'},FULL:{l:'rgba(255,61,113,0.15)',r:'rgba(255,61,113,0.15)',c:'rgba(255,61,113,0.25)'}};
+  const s=shades[jt]||shades.INNER;
+  return `<div class="venn-wrap">
+    <div class="vc vc-l" style="border-color:var(--orange);${s.l?'background:'+s.l:''}">${ln}</div>
+    <div class="vc vc-r" style="border-color:var(--green);${s.r?'background:'+s.r:''}">${rn}</div>
+    <div class="vc-overlap" style="${s.c?'background:'+s.c:''};border-radius:0">${jt}</div>
+  </div>`;
+}
+
+async function showJoinResults(rows, jt, ln, rn) {
+  const info=document.getElementById('join-scan-info');
+  if(info) info.textContent=`${rows.length} row(s) returned`;
+  if(!rows.length){ document.getElementById('join-result-body').innerHTML='<div style="color:var(--text3);font-size:10px;text-align:center;margin-top:12px">No matching rows</div>'; return; }
+  const cols=Object.keys(rows[0].data);
+  const table=document.createElement('table'); table.className='res-tbl';
+  table.innerHTML=`<thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>`;
+  const tbody=document.createElement('tbody'); table.appendChild(tbody);
+  document.getElementById('join-result-body').appendChild(table);
+  for(let i=0;i<rows.length;i++){
+    const row=rows[i]; const tr=document.createElement('tr');
+    tr.className='res-entering'; tr.style.animationDelay=`${i*.05}s`;
+    if(row.type==='left-only') tr.style.background='rgba(255,149,0,0.07)';
+    if(row.type==='right-only') tr.style.background='rgba(167,139,250,0.07)';
+    tr.innerHTML=cols.map(c=>{ const v=row.data[c]; return `<td>${v===null?'<span class="null-c">NULL</span>':v}</td>`; }).join('');
+    tbody.appendChild(tr); await sleep(50);
+  }
+}
+
+function drawBeam(ln,lc,rn,rc,jt) {
+  const svg=document.getElementById('svg-canvas');
+  const canvas=document.getElementById('canvas-wrap').getBoundingClientRect();
+  const lEl=document.getElementById('tbl-'+ln), rEl=document.getElementById('tbl-'+rn);
+  if(!lEl||!rEl) return;
+  const lR=lEl.getBoundingClientRect(), rR=rEl.getBoundingClientRect();
+  const lci=tables[ln].cols.findIndex(c=>c.name===lc), rci=tables[rn].cols.findIndex(c=>c.name===rc);
+  const rh=22, hh=46;
+  const x1=lR.right-canvas.left, y1=lR.top-canvas.top+hh+lci*rh+rh/2;
+  const x2=rR.left-canvas.left,  y2=rR.top-canvas.top+hh+rci*rh+rh/2;
+  const colors={INNER:'#00e676',LEFT:'#ff9500',RIGHT:'#a78bfa',FULL:'#ff3d71'};
+  const color=colors[jt]||'#00d4ff'; const cpx=(x1+x2)/2;
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d',`M ${x1} ${y1} C ${cpx} ${y1}, ${cpx} ${y2}, ${x2} ${y2}`);
+  path.setAttribute('class','join-beam'); path.setAttribute('stroke',color); path.setAttribute('stroke-width','2.5');
+  path.style.filter=`drop-shadow(0 0 5px ${color})`; svg.appendChild(path);
+  // moving dot
+  const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  dot.setAttribute('r','5'); dot.setAttribute('fill',color); dot.setAttribute('class','join-beam scan-dot-svg');
+  dot.style.filter=`drop-shadow(0 0 7px ${color})`;
+  const anim=document.createElementNS('http://www.w3.org/2000/svg','animateMotion');
+  anim.setAttribute('dur','1s'); anim.setAttribute('repeatCount','indefinite');
+  anim.setAttribute('path',`M ${x1} ${y1} C ${cpx} ${y1}, ${cpx} ${y2}, ${x2} ${y2}`);
+  dot.appendChild(anim); svg.appendChild(dot);
+}
+
+// ══════════════════════════════════════════════════════
+//  ANIMATE SELECT / WHERE / ORDER / LIMIT
+// ══════════════════════════════════════════════════════
+async function animateSelect() {
+  if(animating) return; animating=true;
+  const tName=document.getElementById('sw-table').value;
+  if(!tName||!tables[tName]){ log('Select a table first','err'); animating=false; return; }
+  const whereCond=document.getElementById('sw-where').value.trim();
+  const colsStr=document.getElementById('sw-cols').value.trim()||'*';
+  const orderBy=document.getElementById('sw-orderby').value.trim();
+  const orderDir=document.getElementById('sw-order-dir').value;
+  const limitVal=parseInt(document.getElementById('sw-limit').value)||null;
+  const offsetVal=parseInt(document.getElementById('sw-offset').value)||0;
+  const tbl=tables[tName];
+  log(`SELECT ${colsStr} FROM ${tName}${whereCond?' WHERE '+whereCond:''}${orderBy?' ORDER BY '+orderBy+' '+orderDir:''}${limitVal?' LIMIT '+limitVal+' OFFSET '+offsetVal:''}`,'info');
+  buildExecOrderUI('SELECT'); setStatus('RUNNING','SELECT query');
+  switchRTab('result',null);
+  // Highlight table
+  const tEl=document.getElementById('tbl-'+tName); if(tEl) tEl.classList.add('hi-src');
+  highlightExecStep(0); // FROM
+  await sleep(300);
+  highlightExecStep(1); // WHERE — scan rows
+  // Evaluate WHERE
+  let rows=[...tbl.data.map((r,i)=>({row:r,idx:i,pass:true}))];
+  const previewEl=document.getElementById('preview-'+tName);
+  if(previewEl&&!previewEl.classList.contains('open')) previewEl.classList.add('open');
+  if(whereCond) {
+    for(let i=0;i<rows.length;i++) {
+      setRowClass('tbl-'+tName,i,'scan-anim'); await sleep(120);
+      rows[i].pass=evalWhere(rows[i].row,whereCond,tbl.cols);
+      if(!rows[i].pass) setRowClass('tbl-'+tName,i,'row-filtered');
+      else clearRowClass('tbl-'+tName,i);
+      await sleep(50);
+    }
+  }
+  const passing=rows.filter(r=>r.pass);
+  await sleep(200); highlightExecStep(2); // SELECT cols
+  // Select columns
+  let selCols;
+  if(colsStr==='*') selCols=tbl.cols.map(c=>c.name);
+  else selCols=colsStr.split(',').map(c=>c.trim()).filter(c=>tbl.cols.find(col=>col.name===c));
+  await sleep(200); highlightExecStep(3); // ORDER BY
+  let sorted=[...passing];
+  if(orderBy&&tbl.cols.find(c=>c.name===orderBy)) {
+    sorted.sort((a,b)=>{ const av=a.row[orderBy], bv=b.row[orderBy]; if(av===null) return 1; if(bv===null) return -1; return orderDir==='ASC'?(av>bv?1:-1):(av<bv?1:-1); });
+    await sleep(300);
+  }
+  highlightExecStep(4); // LIMIT/OFFSET
+  let limited=sorted.slice(offsetVal, limitVal?offsetVal+limitVal:undefined);
+  await sleep(200);
+  // Show result
+  const filterInfo=`
+    <div class="filter-info">
+      <div class="filter-clause">SELECT ${colsStr} FROM <span style="color:var(--teal)">${tName}</span>${whereCond?` WHERE <span style="color:var(--purple)">${escHtml(whereCond)}</span>`:''}</div>
+      <div class="filter-stats">
+        <div class="filter-stat"><div class="filter-stat-val" style="color:var(--accent)">${tbl.data.length}</div><div class="filter-stat-lbl">total</div></div>
+        <div class="filter-stat"><div class="filter-stat-val" style="color:var(--red)">${rows.filter(r=>!r.pass).length}</div><div class="filter-stat-lbl">filtered</div></div>
+        <div class="filter-stat"><div class="filter-stat-val" style="color:var(--green)">${limited.length}</div><div class="filter-stat-lbl">returned</div></div>
+      </div>
+    </div>`;
+  document.getElementById('rpanel-result').innerHTML=filterInfo+'<div id="select-result-body"></div>';
+  const resTable=document.createElement('table'); resTable.className='res-tbl';
+  resTable.innerHTML=`<thead><tr>${selCols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>`;
+  const tbody=document.createElement('tbody'); resTable.appendChild(tbody);
+  document.getElementById('select-result-body').appendChild(resTable);
+  for(let i=0;i<limited.length;i++){
+    const tr=document.createElement('tr'); tr.className='res-entering'; tr.style.animationDelay=`${i*.04}s`;
+    tr.innerHTML=selCols.map(c=>{ const v=limited[i].row[c]; return `<td>${v===null?'<span class="null-c">NULL</span>':v}</td>`; }).join('');
+    tbody.appendChild(tr); await sleep(40);
+  }
+  // cleanup
+  rows.forEach(r=>clearRowClass('tbl-'+tName,r.idx));
+  if(tEl) tEl.classList.remove('hi-src');
+  log(`Returned ${limited.length} rows`,'ok'); setStatus('OK',`${limited.length} rows returned`);
+  animating=false;
+}
+
+function evalWhere(row, cond, cols) {
+  try {
+    // Handle IS NULL / IS NOT NULL
+    let c=cond.replace(/(\w+)\s+IS\s+NOT\s+NULL/gi,(_,col)=>row[col]!==null&&row[col]!==undefined?'true':'false');
+    c=c.replace(/(\w+)\s+IS\s+NULL/gi,(_,col)=>row[col]===null||row[col]===undefined?'true':'false');
+    // Handle BETWEEN
+    c=c.replace(/(\w+)\s+BETWEEN\s+([^\s]+)\s+AND\s+([^\s]+)/gi,(_,col,lo,hi)=>{
+      const v=row[col]; const l=isNaN(lo)?lo.replace(/'/g,''):Number(lo); const h=isNaN(hi)?hi.replace(/'/g,''):Number(hi);
+      return (v>=l&&v<=h)?'true':'false';
+    });
+    // Handle IN
+    c=c.replace(/(\w+)\s+IN\s*\(([^)]+)\)/gi,(_,col,vals)=>{
+      const v=row[col]; const list=vals.split(',').map(x=>x.trim().replace(/'/g,''));
+      return list.some(x=>String(v)===String(x))?'true':'false';
+    });
+    // Handle LIKE (simple % wildcard)
+    c=c.replace(/(\w+)\s+LIKE\s+'([^']+)'/gi,(_,col,pat)=>{
+      const v=String(row[col]||''); const regex=new RegExp('^'+pat.replace(/%/g,'.*').replace(/_/g,'.')+'$','i');
+      return regex.test(v)?'true':'false';
+    });
+    // Replace column names with values
+    cols.forEach(col=>{ c=c.replace(new RegExp('\\b'+col.name+'\\b','g'), JSON.stringify(row[col.name])); });
+    // Replace = with == carefully (avoid breaking == and !=)
+    c=c.replace(/([^!<>=])=([^=>])/g,'$1==$2');
+    c=c.replace(/AND/gi,'&&').replace(/OR/gi,'||').replace(/NOT\s+/gi,'!');
+    return !!eval(c); // eslint-disable-line no-eval
+  } catch(e) { return true; }
+}
+
+function injectFilter(type) {
+  const inp=document.getElementById('sw-where');
+  const templates={LIKE:" LIKE '%value%'",IN:" IN (v1,v2,v3)",BETWEEN:" BETWEEN 10 AND 100",'IS NULL':" IS NULL",'IS NOT NULL':" IS NOT NULL"};
+  inp.value+=(inp.value?' AND ':'')+('col'+templates[type]);
+  inp.focus();
+}
+
+// ══════════════════════════════════════════════════════
+//  ANIMATE DML
+// ══════════════════════════════════════════════════════
+async function animateDML() {
+  if(animating) return; animating=true;
+  const tName=document.getElementById('dml-table').value;
+  if(!tName||!tables[tName]){ log('Select a table','err'); animating=false; return; }
+  const tbl=tables[tName]; const tEl=document.getElementById('tbl-'+tName);
+  const op=selectedDML;
+  buildExecOrderUI('DML'); setStatus('RUNNING',`${op} animation`);
+  switchRTab('result',null);
+  if(tEl){ tEl.classList.add('hi-dml'); const p=document.getElementById('preview-'+tName); if(p&&!p.classList.contains('open')) p.classList.add('open'); }
+
+  if(op==='INSERT') {
+    const rawVals=document.getElementById('dml-insert-vals').value.trim();
+    if(!rawVals){ log('No VALUES provided','err'); animating=false; if(tEl) tEl.classList.remove('hi-dml'); return; }
+    const rowStrings=rawVals.split('\n').filter(r=>r.trim());
+    log(`INSERT INTO ${tName} — ${rowStrings.length} row(s)`,'info');
+    const inserted=[];
+    for(const rs of rowStrings) {
+      const vals=parseValues(rs.replace(/^\s*\(|\)\s*$/g,''));
+      const row={}; tbl.cols.forEach((c,i)=>{ row[c.name]=vals[i]!==undefined?vals[i]:null; });
+      tbl.data.push(row); inserted.push(row);
+      refreshPreview(tName); await sleep(300);
+      const newIdx=tbl.data.length-1; setRowClass('tbl-'+tName,newIdx,'row-inserted'); await sleep(600); clearRowClass('tbl-'+tName,newIdx);
+    }
+    showDMLResult('INSERT',tName,inserted,null,null);
+    log(`Inserted ${inserted.length} row(s) into ${tName}`,'ok');
+
+  } else if(op==='UPDATE') {
+    const setStr=document.getElementById('dml-set').value.trim();
+    const whereStr=document.getElementById('dml-where-upd').value.trim();
+    if(!setStr){ log('SET clause required','err'); animating=false; if(tEl) tEl.classList.remove('hi-dml'); return; }
+    log(`UPDATE ${tName} SET ${setStr}${whereStr?' WHERE '+whereStr:''}`,'info');
+    const updated=[];
+    for(let i=0;i<tbl.data.length;i++){
+      setRowClass('tbl-'+tName,i,'scan-anim'); await sleep(100);
+      const pass=whereStr?evalWhere(tbl.data[i],whereStr,tbl.cols):true;
+      if(pass){ applySet(tbl.data[i],setStr); setRowClass('tbl-'+tName,i,'row-updated'); refreshPreview(tName); await sleep(400); updated.push({...tbl.data[i]}); }
+      else clearRowClass('tbl-'+tName,i);
+    }
+    tbl.data.forEach((_,i)=>clearRowClass('tbl-'+tName,i));
+    showDMLResult('UPDATE',tName,null,updated,null);
+    log(`Updated ${updated.length} row(s) in ${tName}`,'ok');
+
+  } else if(op==='DELETE'||op==='TRUNCATE') {
+    const whereStr=op==='DELETE'?document.getElementById('dml-where-del').value.trim():'';
+    if(op==='TRUNCATE'||!whereStr){ log(`${op} ${tName} — removing all rows`,'warn'); }
+    else log(`DELETE FROM ${tName} WHERE ${whereStr}`,'info');
+    const deleted=[]; const keep=[];
+    if(op==='TRUNCATE') { deleted.push(...tbl.data); tbl.data=[]; }
+    else {
+      for(let i=0;i<tbl.data.length;i++){
+        setRowClass('tbl-'+tName,i,'scan-anim'); await sleep(90);
+        const del=whereStr?evalWhere(tbl.data[i],whereStr,tbl.cols):true;
+        if(del){ setRowClass('tbl-'+tName,i,'row-deleted'); await sleep(350); deleted.push(tbl.data[i]); }
+        else { clearRowClass('tbl-'+tName,i); keep.push(tbl.data[i]); }
+      }
+      tbl.data=keep;
+    }
+    refreshPreview(tName);
+    showDMLResult(op,tName,null,null,deleted);
+    log(`${op}: removed ${deleted.length} row(s) from ${tName}`,'ok');
+  }
+
+  updateStats(); renderConnections();
+  if(tEl) tEl.classList.remove('hi-dml');
+  setStatus('OK',`${op} complete`); animating=false;
+}
+
+function applySet(row, setStr) {
+  setStr.split(',').forEach(part=>{
+    const m=part.trim().match(/(\w+)\s*=\s*(.+)/);
+    if(m){ let v=m[2].trim(); v=v.startsWith("'")?v.slice(1,-1):v==='NULL'?null:isNaN(v)?v:Number(v); row[m[1]]=v; }
+  });
+}
+
+function showDMLResult(op, tName, inserted, updated, deleted) {
+  const colors={INSERT:'var(--green)',UPDATE:'var(--yellow)',DELETE:'var(--red)',TRUNCATE:'var(--pink)'};
+  const color=colors[op];
+  let html=`<div class="dml-result-card" style="border-color:${color}33">
+    <div class="dml-result-title" style="color:${color}">⚡ ${op} on <span style="color:var(--teal)">${tName}</span></div>`;
+  const arr=inserted||updated||deleted||[];
+  if(arr.length){
+    const cols=Object.keys(arr[0]);
+    html+=`<table class="res-tbl"><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;
+    arr.forEach(row=>{ html+=`<tr>${cols.map(c=>`<td>${row[c]===null?'<span class="null-c">NULL</span>':row[c]}</td>`).join('')}</tr>`; });
+    html+=`</tbody></table>`;
+  } else html+=`<div style="color:var(--text3);font-size:10px">No rows affected</div>`;
+  html+=`</div>`;
+  if(op==='DELETE'||op==='TRUNCATE') html+=`<div class="filter-info" style="border-color:var(--red)33;margin-top:6px">
+    <div style="font-size:9px;color:var(--text3);line-height:1.7">
+      ${op==='TRUNCATE'?'<span style="color:var(--pink)">TRUNCATE</span> drops all rows instantly — no WHERE, no rollback. Resets AUTO_INCREMENT.':'<span style="color:var(--red)">DELETE</span> removes specific rows matching WHERE condition. Slower but rollback-safe. Triggers fire.'}
+    </div></div>`;
+  document.getElementById('rpanel-result').innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════
+//  ANIMATE AGGREGATION
+// ══════════════════════════════════════════════════════
+async function animateAgg() {
+  if(animating) return; animating=true;
+  const tName=document.getElementById('agg-table').value;
+  if(!tName||!tables[tName]){ log('Select a table','err'); animating=false; return; }
+  const tbl=tables[tName];
+  const groupBy=document.getElementById('agg-groupby').value;
+  const fn=selectedAggFn;
+  const aggCol=document.getElementById('agg-col').value;
+  const having=document.getElementById('agg-having').value.trim();
+  const showNull=document.getElementById('agg-null-check').checked;
+  if((fn!=='COUNT')&&!aggCol){ log('Select a column for '+fn,'err'); animating=false; return; }
+  log(`SELECT ${groupBy?groupBy+', ':''}${fn}(${fn==='COUNT'?'*':aggCol}) FROM ${tName}${groupBy?' GROUP BY '+groupBy:''}${having?' HAVING '+having:''}`,'info');
+  buildExecOrderUI('AGG'); setStatus('RUNNING','Aggregation');
+  switchRTab('result',null);
+  const tEl=document.getElementById('tbl-'+tName); if(tEl) tEl.classList.add('hi-dml');
+  const p=document.getElementById('preview-'+tName); if(p&&!p.classList.contains('open')) p.classList.add('open');
+  highlightExecStep(0); await sleep(300);
+  highlightExecStep(1);
+  // Scan rows
+  for(let i=0;i<tbl.data.length;i++){ setRowClass('tbl-'+tName,i,'scan-anim'); await sleep(100); clearRowClass('tbl-'+tName,i); }
+  highlightExecStep(2); await sleep(300); // GROUP BY
+  // Build groups
+  const groups={};
+  tbl.data.forEach(row=>{
+    const key=groupBy?(row[groupBy]===null?'NULL':String(row[groupBy])):'__all__';
+    if(!groups[key]) groups[key]=[];
+    groups[key].push(row);
+  });
+  // Compute aggregate
+  let results=Object.entries(groups).map(([key,rows])=>{
+    let val;
+    if(fn==='COUNT') val=rows.length;
+    else {
+      const nums=rows.map(r=>r[aggCol]).filter(v=>v!==null&&v!==undefined&&!isNaN(v)).map(Number);
+      if(fn==='SUM') val=nums.reduce((a,b)=>a+b,0);
+      else if(fn==='AVG') val=nums.length?+(nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(2):null;
+      else if(fn==='MIN') val=nums.length?Math.min(...nums):null;
+      else if(fn==='MAX') val=nums.length?Math.max(...nums):null;
+    }
+    if(showNull&&fn!=='COUNT') { const nullCount=rows.filter(r=>r[aggCol]===null).length; return {key,val,rows:rows.length,nullCount}; }
+    return {key,val,rows:rows.length,nullCount:0};
+  });
+  highlightExecStep(3); await sleep(200); // HAVING
+  let filtered=results;
+  if(having) {
+    filtered=results.filter(r=>{ try{ const expr=having.replace(/COUNT\(\*\)|COUNT\s*\(\s*\*\s*\)/gi,r.rows).replace(/SUM\([^)]+\)|AVG\([^)]+\)|MIN\([^)]+\)|MAX\([^)]+\)/gi,r.val).replace(/=/g,'==').replace(/!===/, '!==').replace(/====/, '==='); return !!eval(expr); } catch(e){ return true; } }); // eslint-disable-line no-eval
+  }
+  const maxVal=Math.max(...filtered.map(r=>r.val||0));
+  // Animate showing results
+  const html=`<div class="agg-card">
+    <div class="agg-card-title">📊 ${fn}(${fn==='COUNT'?'*':aggCol})${groupBy?' GROUP BY '+groupBy:''}</div>
+    <div style="font-size:9px;color:var(--text3);margin-bottom:8px">${filtered.length} group(s)${having?' HAVING: '+escHtml(having):''}</div>
+    <div class="agg-groups" id="agg-groups"></div>
+  </div>`;
+  document.getElementById('rpanel-result').innerHTML=html;
+  for(const r of filtered){
+    const pct=maxVal>0?Math.round((r.val/maxVal)*100):0;
+    const item=document.createElement('div'); item.className='agg-group-item res-entering';
+    item.innerHTML=`<div style="flex:1">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="agg-group-key">${r.key==='__all__'?'(all rows)':r.key}</span>
+        <span class="agg-group-val">${r.val!==null?r.val:'NULL'}</span>
+      </div>
+      <div class="agg-group-bar" style="width:0" id="bar-${r.key}"></div>
+      ${showNull&&r.nullCount>0?`<div style="font-size:8px;color:var(--red);margin-top:2px">⚠ ${r.nullCount} NULL value(s) excluded from ${fn}</div>`:''}
+    </div>`;
+    document.getElementById('agg-groups').appendChild(item);
+    await sleep(60);
+    setTimeout(()=>{ const bar=document.getElementById('bar-'+r.key); if(bar) bar.style.width=pct+'%'; },100);
+  }
+  if(tEl) tEl.classList.remove('hi-dml');
+  log(`Aggregation: ${filtered.length} group(s)`,'ok'); setStatus('OK',`${fn} — ${filtered.length} groups`);
+  animating=false;
+}
+
+// ══════════════════════════════════════════════════════
+//  EXECUTION ORDER VISUALIZER
+// ══════════════════════════════════════════════════════
+const EXEC_STEPS = {
+  SELECT:[
+    {kw:'FROM',       desc:'Load the base table(s) into memory',                  color:'#00d4ff'},
+    {kw:'WHERE',      desc:'Filter rows — applied BEFORE grouping',               color:'#a78bfa'},
+    {kw:'SELECT',     desc:'Choose which columns to output',                      color:'#00e676'},
+    {kw:'ORDER BY',   desc:'Sort the result set',                                 color:'#ff9500'},
+    {kw:'LIMIT/OFFSET',desc:'Truncate result to N rows starting at offset',       color:'#ffd166'},
+  ],
+  JOIN:[
+    {kw:'FROM',       desc:'Load the driving (left) table',                       color:'#00d4ff'},
+    {kw:'JOIN',       desc:'Match rows from the joined table one-by-one',         color:'#ff9500'},
+    {kw:'ON / WHERE', desc:'Filter matched pairs',                                color:'#a78bfa'},
+    {kw:'SELECT',     desc:'Pick output columns from combined row',               color:'#00e676'},
+  ],
+  AGG:[
+    {kw:'FROM',       desc:'Load the full table',                                 color:'#00d4ff'},
+    {kw:'WHERE',      desc:'Filter before grouping (NULLs excluded here)',        color:'#a78bfa'},
+    {kw:'GROUP BY',   desc:'Collapse rows into groups by key column',             color:'#ff9500'},
+    {kw:'HAVING',     desc:'Filter groups (runs AFTER aggregation)',              color:'#ffd166'},
+    {kw:'SELECT',     desc:'Compute aggregates per group',                        color:'#00e676'},
+  ],
+  DML:[
+    {kw:'PARSE',      desc:'Validate syntax and table/column existence',          color:'#00d4ff'},
+    {kw:'LOCK',       desc:'Acquire row/table lock for write safety',             color:'#a78bfa'},
+    {kw:'WHERE',      desc:'Identify target rows',                                color:'#ff9500'},
+    {kw:'MODIFY',     desc:'Apply INSERT / UPDATE / DELETE operation',            color:'#ffd166'},
+    {kw:'COMMIT',     desc:'Write changes to disk, release lock',                 color:'#00e676'},
+  ]
+};
+
+let execStepIdx=-1, execType='SELECT';
+
+function buildExecOrderUI(type) {
+  execType=type; execStepIdx=-1;
+  const steps=EXEC_STEPS[type]||EXEC_STEPS.SELECT;
+  const container=document.getElementById('exec-order-steps'); container.innerHTML='';
+  steps.forEach((s,i)=>{
+    const div=document.createElement('div'); div.className='exec-step pending'; div.id='exec-step-'+i;
+    div.innerHTML=`<div class="exec-shine"></div><span class="exec-num">${i+1}</span><div style="flex:1"><div class="exec-kw">${s.kw}</div><div class="exec-desc">${s.desc}</div></div><span style="font-size:16px">${i<steps.length-1?'↓':''}</span>`;
+    container.appendChild(div);
+  });
+  // Also build full modal version
+  buildExecOrderFull(type);
+}
+
+function highlightExecStep(idx) {
+  execStepIdx=idx;
+  const steps=EXEC_STEPS[execType]||EXEC_STEPS.SELECT;
+  for(let i=0;i<steps.length;i++){
+    const el=document.getElementById('exec-step-'+i);
+    if(!el) continue;
+    el.classList.remove('active','done','pending');
+    if(i<idx) el.classList.add('done');
+    else if(i===idx) el.classList.add('active');
+    else el.classList.add('pending');
+  }
+  // Switch to exec order tab in rpanel to show
+  // but keep result tab active – show exec order inline in sidebar if open
+}
+
+function buildExecOrderFull(type) {
+  const steps=EXEC_STEPS[type]||EXEC_STEPS.SELECT;
+  const container=document.getElementById('exec-order-full'); container.innerHTML='';
+  const totalOrder=['FROM','WHERE','GROUP BY','HAVING','SELECT','DISTINCT','ORDER BY','LIMIT'];
+  const sqlWriteOrder=['SELECT','FROM','WHERE','GROUP BY','HAVING','ORDER BY','LIMIT'];
+  container.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:var(--bg3);border-radius:7px;padding:10px;border:1px solid var(--border)">
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">You write SQL as:</div>
+        ${sqlWriteOrder.map((kw,i)=>`<div style="padding:4px 8px;border-radius:4px;background:var(--bg);margin-bottom:3px;font-size:10px;color:var(--text2);border:1px solid var(--border)"><span style="color:var(--text3);margin-right:6px">${i+1}</span>${kw}</div>`).join('')}
+      </div>
+      <div style="background:var(--bg3);border-radius:7px;padding:10px;border:1px solid var(--border)">
+        <div style="font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">MySQL executes as:</div>
+        ${totalOrder.map((kw,i)=>`<div style="padding:4px 8px;border-radius:4px;background:var(--accent)${i===4?'20':'08'};margin-bottom:3px;font-size:10px;color:${i===4?'var(--accent)':'var(--text)'};border:1px solid ${i===4?'var(--accent)44':'var(--border)'}"><span style="color:var(--accent);margin-right:6px">${i+1}</span>${kw}</div>`).join('')}
+      </div>
+    </div>
+    <div style="background:var(--bg3);border-radius:7px;padding:10px;border:1px solid var(--border2)">
+      <div style="font-size:9px;color:var(--yellow);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⚠ Common Mistakes This Causes</div>
+      <div style="font-size:10px;color:var(--text2);line-height:1.8">
+        • You can't use a <span style="color:var(--accent)">SELECT alias</span> in WHERE (SELECT runs after WHERE)<br>
+        • <span style="color:var(--accent)">HAVING</span> filters groups, <span style="color:var(--accent)">WHERE</span> filters rows — use WHERE first for performance<br>
+        • <span style="color:var(--accent)">ORDER BY</span> runs near the end, so it can use SELECT aliases<br>
+        • <span style="color:var(--accent)">LIMIT</span> is last — it slices the final sorted result
+      </div>
+    </div>`;
+}
+
+function openExecOrder() {
+  if(!execType) buildExecOrderFull('SELECT');
+  document.getElementById('exec-overlay').classList.add('open');
+}
+function closeExecOrder() { document.getElementById('exec-overlay').classList.remove('open'); }
+
+// ══════════════════════════════════════════════════════
+//  EXPLAIN PANEL
+// ══════════════════════════════════════════════════════
+function buildExplain(type, details) {
+  const el=document.getElementById('explain-body');
+  const explains={
+    SELECT:`<span style="color:var(--accent)">FROM</span> loads the full table into working memory.<br>
+            <span style="color:var(--purple)">WHERE</span> evaluates each row against your condition — rows that don't match are discarded early (saves memory).<br>
+            <span style="color:var(--green)">SELECT</span> picks only the requested columns from surviving rows.<br>
+            <span style="color:var(--orange)">ORDER BY</span> sorts — expensive without an index.<br>
+            <span style="color:var(--yellow)">LIMIT</span> clips the output to N rows after sorting.`,
+    JOIN:`Rows from both tables are compared on the join key. Without an index, this is an <span style="color:var(--red)">O(n×m) nested loop</span>. With an index, MySQL uses a <span style="color:var(--green)">index lookup</span> making it O(n log m).`,
+    AGG:`MySQL scans all rows, groups them by key, then applies your aggregate function per group. The HAVING clause runs <span style="color:var(--yellow)">after</span> aggregation — it cannot filter individual rows, only groups.`,
+    DML:`DML operations acquire a <span style="color:var(--orange)">row lock</span> before modifying. INSERT appends. UPDATE modifies in-place. DELETE marks rows deleted (data may linger until garbage collected). TRUNCATE <span style="color:var(--red)">drops and recreates</span> the table — much faster but non-rollbackable.`
+  };
+  if(el) el.innerHTML=explains[type]||explains.SELECT;
+}
+
+// ══════════════════════════════════════════════════════
+//  ROW CLASS HELPERS
+// ══════════════════════════════════════════════════════
+function setRowClass(tblElId, rowIdx, cls) {
+  const tEl=document.getElementById(tblElId); if(!tEl) return;
+  const rows=tEl.querySelectorAll('.preview-table tbody tr');
+  if(rows[rowIdx]) rows[rowIdx].className=cls;
+  const colRows=tEl.querySelectorAll('.tbl-col');
+  if(cls==='scan-anim'&&colRows[rowIdx]) colRows[rowIdx].style.background='rgba(0,212,255,0.09)';
+}
+function clearRowClass(tblElId, rowIdx) {
+  const tEl=document.getElementById(tblElId); if(!tEl) return;
+  const rows=tEl.querySelectorAll('.preview-table tbody tr');
+  if(rows[rowIdx]) rows[rowIdx].className='';
+  const colRows=tEl.querySelectorAll('.tbl-col');
+  if(colRows[rowIdx]) colRows[rowIdx].style.background='';
+}
+
+// ══════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ══════════════════════════════════════════════════════
+function switchTab(name, btn) {
+  activeTab=name;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(el=>el.style.display='none');
+  const t=document.getElementById('tab-'+name); if(t) t.style.display='block';
+}
+function switchRTab(name, btn) {
+  activeRTab=name;
+  if(btn){ document.querySelectorAll('.rpanel-tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+  document.querySelectorAll('.rpanel-body').forEach(el=>el.style.display='none');
+  const t=document.getElementById('rpanel-'+name); if(t) t.style.display='block';
+}
+function runCurrentTab() {
+  const actions={schema:executeSchema, dml:animateDML, select:animateSelect, join:animateJoin, agg:animateAgg};
+  const fn=actions[activeTab]; if(fn) fn();
+}
+
+// ══════════════════════════════════════════════════════
+//  JOIN / DML / AGG TYPE SELECTION
+// ══════════════════════════════════════════════════════
+function selJoin(type, btn) {
+  selectedJoin=type;
+  document.querySelectorAll('.jtype-btn').forEach(b=>b.className='jtype-btn');
+  const cls={INNER:'ji',LEFT:'jl',RIGHT:'jr',FULL:'jf'}[type];
+  if(btn) btn.className='jtype-btn '+cls;
+}
+function selDML(type, btn) {
+  selectedDML=type;
+  document.querySelectorAll('.dml-type-btn').forEach(b=>{ b.className='dml-type-btn'; });
+  const cls={INSERT:'di',UPDATE:'du',DELETE:'dd',TRUNCATE:'dt'}[type];
+  if(btn) btn.className='dml-type-btn '+cls;
+  ['insert','update','delete'].forEach(t=>{ const el=document.getElementById('dml-'+t+'-fields'); if(el) el.style.display='none'; });
+  const truncNote=document.getElementById('dml-truncate-note');
+  if(type==='INSERT') document.getElementById('dml-insert-fields').style.display='block';
+  else if(type==='UPDATE') document.getElementById('dml-update-fields').style.display='block';
+  else if(type==='DELETE'){ document.getElementById('dml-delete-fields').style.display='block'; if(truncNote) truncNote.style.display='none'; }
+  else if(type==='TRUNCATE'){ document.getElementById('dml-delete-fields').style.display='block'; if(truncNote) truncNote.style.display='block'; document.getElementById('dml-where-del').style.display='none'; }
+  if(type!=='TRUNCATE'&&document.getElementById('dml-where-del')) document.getElementById('dml-where-del').style.display='block';
+}
+function selAggFn(fn, btn) {
+  selectedAggFn=fn;
+  document.querySelectorAll('.agg-fn-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════
+//  SELECTS POPULATION
+// ══════════════════════════════════════════════════════
+function updateSelects() {
+  const names=Object.keys(tables);
+  const selIds=['j-left','j-right','dml-table','sw-table','agg-table'];
+  selIds.forEach(id=>{ const s=document.getElementById(id); if(!s) return; const cur=s.value; s.innerHTML='<option value="">— select —</option>'+names.map(n=>`<option value="${n}"${n===cur?' selected':''}>${n}</option>`).join(''); });
+  // auto FK cond
+  document.getElementById('j-left').addEventListener('change',autoFKCond);
+  document.getElementById('j-right').addEventListener('change',autoFKCond);
+}
+function autoFKCond() {
+  const l=document.getElementById('j-left').value, r=document.getElementById('j-right').value;
+  if(!l||!r) return;
+  const rel=relations.find(x=>(x.from===l&&x.to===r)||(x.from===r&&x.to===l));
+  if(rel) document.getElementById('j-cond').value=`${rel.from}.${rel.fromCol} = ${rel.to}.${rel.toCol}`;
+}
+function populateSWCols() { /* cols already free-text */ }
+function populateAggCols() {
+  const tName=document.getElementById('agg-table').value; if(!tName||!tables[tName]) return;
+  const cols=tables[tName].cols;
+  ['agg-groupby','agg-col'].forEach(id=>{ const s=document.getElementById(id); if(!s) return; s.innerHTML=(id==='agg-groupby'?'<option value="">— none —</option>':'')+cols.map(c=>`<option value="${c.name}">${c.name}</option>`).join(''); });
+}
+
+// ══════════════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════════════
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function log(msg, type='info'){ const d=document.createElement('div'); d.className='log-'+type; d.textContent='> '+msg; const l=document.getElementById('qlog'); l.appendChild(d); l.scrollTop=l.scrollHeight; }
+function setStatus(st,msg){ const m=document.getElementById('s-main'),s=document.getElementById('s-msg'); m.className={OK:'s-ok',ERR:'s-err',RUNNING:'s-run'}[st]||''; m.textContent='● '+st; s.textContent=msg; }
+function updateStats(){ document.getElementById('st-tables').textContent=Object.keys(tables).length; document.getElementById('st-rels').textContent=relations.length; document.getElementById('st-rows').textContent=Object.values(tables).reduce((a,t)=>a+t.data.length,0); }
+function clearAll(){ tables={}; relations=[]; colorIdx=0; document.querySelectorAll('.db-tbl').forEach(e=>e.remove()); document.getElementById('svg-canvas').innerHTML=''; document.getElementById('rpanel-result').innerHTML='<div style="color:var(--text3);font-size:10px;text-align:center;margin-top:30px;line-height:2">Run any operation<br>to see results here.</div>'; document.getElementById('qlog').innerHTML='<div style="color:var(--text3)">// Cleared.</div>'; updateSelects(); updateStats(); document.getElementById('canvas-lbl-cnt').textContent='— no tables'; setStatus('OK','Cleared'); }
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── init exec order panel ──
+buildExecOrderUI('SELECT');
+buildExplain('SELECT');
+log('SQLMem v2 ready — load a preset or write SQL to begin.','info');
+</script>
+</body>
+</html>
