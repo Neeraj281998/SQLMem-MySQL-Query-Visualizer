@@ -57,9 +57,6 @@ Watch your SQL queries execute step-by-step with live table animations, FK relat
   - [Aggregations](#aggregations)
 - [Preset Schemas](#-preset-schemas)
 - [Architecture](#-architecture)
-- [Roadmap](#-roadmap)
-- [Contributing](#-contributing)
-- [License](#-license)
 
 ---
 
@@ -644,40 +641,7 @@ sqlmem.html
 
 ---
 
-## 🗺 Roadmap
 
-- [ ] **Subquery Visualizer** — nested cards showing inner query executing first
-- [ ] **Index Visualizer** — full scan vs binary search animation
-- [ ] **Quiz Mode** — write SQL to match an expected result set
-- [ ] **URL Sharing** — encode schema+query into a shareable link
-- [ ] **UNION / UNION ALL** — merge animation with duplicate highlighting
-- [ ] **Transaction Visualizer** — BEGIN / COMMIT / ROLLBACK with row states
-- [ ] **Export ER Diagram** — download schema as SVG/PNG
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Here's how to get started:
-
-```bash
-# Fork the repository on GitHub, then clone your fork
-git clone https://github.com/YOUR_USERNAME/sqlmem.git
-cd sqlmem
-
-# Create a feature branch
-git checkout -b feature/my-new-feature
-
-# Make your changes to sqlmem.html
-# Test by opening in a browser
-
-# Commit and push
-git add sqlmem.html
-git commit -m "feat: add my new feature"
-git push origin feature/my-new-feature
-
-# Open a Pull Request on GitHub
-```
 
 ### Guidelines
 
